@@ -1,4 +1,5 @@
-import fetch from 'node-fetch';
+import ky from 'ky';
+
 import _config from './config.json' assert { type: 'json' };
 const config: Config = _config;
 
@@ -18,22 +19,25 @@ type RpcResponse = {
 const RPCID = 'p2tr';
 
 export async function request(method: string, ...params: string[]) {
-    const body = JSON.stringify({
+    const body = {
         jsonrpc: '2.0',
         id: RPCID,
         method,
         params,
-    });
+    };
     try {
-        const response = await fetch(`http://localhost:${config.rpcport}`, {
-            method: 'post',
-            body,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Basic ' + btoa(`${config.rpcuser}:${config.rpcpass}`),
+        const api = ky.extend({
+            hooks: {
+                beforeRequest: [
+                    request => {
+                        request.headers.set('Authorization', 'Basic ' + btoa(`${config.rpcuser}:${config.rpcpass}`));
+                    }
+                ]
             }
         });
-        const res = await response.json() as RpcResponse;
+        const res = await api.post(`http://localhost:${config.rpcport}`, {
+            json: body,
+        }).json() as RpcResponse;
         if (!res || res.id !== RPCID) {
             throw new Error('invalid response: ' + method);
         }
