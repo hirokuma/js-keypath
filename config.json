@@ -1,0 +1,6 @@
+{
+    "network": "regtest",
+    "rpcuser": "user",
+    "rpcpass": "pass",
+    "rpcport": 18443
+}
