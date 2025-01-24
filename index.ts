@@ -7,9 +7,24 @@ import * as ecc from 'tiny-secp256k1';
 
 import * as rpc from './bitcoinrpc.js';
 
+type GetRawTransaction = {
+  confirmations?: number;
+  vout: [
+    {
+      value: number;
+      n: number;
+      scriptPubKey: {
+        address: string;
+      },
+    },
+  ],
+};
+
 async function sleepMsec(msec: number) {
   new Promise(resolve => setTimeout(resolve, msec));
 }
+
+const FEE = 1000;
 
 const rng = (size: number) => randomBytes(size);
 const bip32 = _bip32.BIP32Factory(ecc);
@@ -21,45 +36,45 @@ bitcoin.initEccLib(ecc);
 (async () => {
   let res;
 
+  // for generatetoaddress
+  const genAddr = await rpc.request('getnewaddress') as string;
+
   // target key
   const internalKey = bip32.fromSeed(rng(64), network);
 
+  // tweaked keys
   const tweakedSigner = internalKey.tweak(
     bitcoin.crypto.taggedHash('TapTweak', toXOnly(internalKey.publicKey)),
   );
+
+  // P2TR key path address
   const keyPath = bitcoin.payments.p2tr({
       pubkey: toXOnly(tweakedSigner.publicKey),
       network
   });
   const keyPathAddr = keyPath.address!;
-  console.log(`sent: bitcoin-cli -regtest sendtoaddress ${keyPathAddr} 0.001`);
 
+  // send to address
   const txid = await rpc.request('sendtoaddress', keyPathAddr, 0.001) as string;
-  console.log(`sent txid: ${txid}`);
-  await sleepMsec(3000);
+  console.log(`send to ${keyPathAddr}, txid: ${txid}`);
 
+  // generate block
+  console.log(`generate block: ${genAddr}`);
+  let blockhash = await rpc.request('generatetoaddress', 1, genAddr) as string[];
+  console.log(blockhash);
+
+  // wait for confirmation
   while (true) {
-    type GetRawTransaction = {
-      confirmations?: number;
-      vout: [
-        {
-          value: number;
-          n: number;
-          scriptPubKey: {
-            address: string;
-          },
-        },
-      ],
-    };
     res = await rpc.request('getrawtransaction', txid, 1) as GetRawTransaction;
     if (res.confirmations && res.confirmations > 0) {
       break;
     }
     await sleepMsec(3000);
   }
-  console.log('detected');
   console.log(JSON.stringify(res, null, 2));
 
+  console.log('\n\n---------------- redeem ----------------\n');
+  // outpoint
   let voutIndex = -1;
   for (const vout of res.vout) {
     if (vout.scriptPubKey.address === keyPathAddr) {
@@ -71,5 +86,51 @@ bitcoin.initEccLib(ecc);
     console.error('vout not found');
     return;
   }
-  console.log(`voutIndex: ${voutIndex}`);
+
+  // create redeem transaction
+  const inputSats = res.vout[voutIndex].value * 100_000_000;
+  const psbt = new bitcoin.Psbt({ network });
+  psbt.addInput({
+    hash: txid,
+    index: voutIndex,
+    witnessUtxo: {
+      value: inputSats,
+      script: keyPath.output!,
+    },
+    tapInternalKey: keyPath.pubkey!,
+  });
+
+  const recvAddr = await rpc.request('getnewaddress') as string;
+  psbt.addOutput({
+    address: recvAddr,
+    value: inputSats - FEE,
+  });
+
+  psbt.signInput(0, tweakedSigner);
+  psbt.finalizeAllInputs();
+
+  // broadcast redeem transaction
+  const tx = psbt.extractTransaction();
+  res = await rpc.request('sendrawtransaction', tx.toHex());
+  console.log(`Send to ${recvAddr}: ${res}`);
+
+  const redeemTxid = tx.getId();
+  console.log(`Redeem txid: ${redeemTxid}`);
+
+  // generate block
+  console.log(`generate block: ${genAddr}`);
+  blockhash = await rpc.request('generatetoaddress', 1, genAddr) as string[];
+  console.log(blockhash);
+
+  // wait for confirmation
+  while (true) {
+    res = await rpc.request('getrawtransaction', redeemTxid, 1) as GetRawTransaction;
+    if (res.confirmations && res.confirmations > 0) {
+      break;
+    }
+    await sleepMsec(3000);
+  }
+  console.log(JSON.stringify(res, null, 2));
+
+  console.log('\n---------------- done ----------------');
 })();
