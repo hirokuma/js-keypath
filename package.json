@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npx tsc; node dist/index.js"
+    "start": "npx tsc; node dist/index.js",
+    "eslint": "npx eslint ."
   },
   "keywords": [],
   "author": "",
@@ -11,10 +12,16 @@
   "description": "",
   "type": "module",
   "dependencies": {
-    "@types/node": "^22.10.7",
     "bitcoinjs-lib": "^6.1.7",
-    "ecpair": "^3.0.0-rc.0",
+    "ecpair": "^2.1.0",
     "ky": "^1.7.4",
-    "typescript": "^5.7.3"
+    "tiny-secp256k1": "^2.2.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.10",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
   }
 }
