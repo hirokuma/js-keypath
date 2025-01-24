@@ -13,12 +13,13 @@ interface Config {
 type RpcResponse = {
     id: string;
     error: string;
-    result: any;
+    result: unknown;
 };
 
 const RPCID = 'p2tr';
 
-export async function request(method: string, ...params: string[]) {
+type Params = number | string | boolean;
+export async function request(method: string, ...params: Params[]) {
     const body = {
         jsonrpc: '2.0',
         id: RPCID,
@@ -45,7 +46,7 @@ export async function request(method: string, ...params: string[]) {
             throw res.error;
         }
         return res.result;
-    } catch (e: any) {
+    } catch (e) {
         console.error(`bitcoinrpc.request error: ${e}`);
         throw e;
     }
