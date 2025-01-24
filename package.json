@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "npx tsc; node dist/index.js",
+    "build": "npx tsc",
+    "run": "node dist/index.js",
     "eslint": "npx eslint ."
   },
   "keywords": [],
@@ -12,6 +14,7 @@
   "description": "",
   "type": "module",
   "dependencies": {
+    "bip32": "^4.0.0",
     "bitcoinjs-lib": "^6.1.7",
     "ecpair": "^2.1.0",
     "ky": "^1.7.4",
