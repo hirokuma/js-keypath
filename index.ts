@@ -2,7 +2,6 @@ import * as _bip32 from 'bip32';
 import * as bitcoin from "bitcoinjs-lib";
 import { toXOnly } from "bitcoinjs-lib/src/psbt/bip371.js";
 import { randomBytes } from 'crypto';
-// import { ECPairFactory, ECPairAPI, TinySecp256k1Interface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 
 import * as rpc from './bitcoinrpc.js';
@@ -28,7 +27,6 @@ const FEE = 1000;
 
 const rng = (size: number) => randomBytes(size);
 const bip32 = _bip32.BIP32Factory(ecc);
-// const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = bitcoin.networks.regtest;
 
 bitcoin.initEccLib(ecc);
