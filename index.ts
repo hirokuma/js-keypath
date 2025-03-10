@@ -1,6 +1,5 @@
 import * as _bip32 from 'bip32';
 import * as bitcoin from "bitcoinjs-lib";
-import { toXOnly } from "bitcoinjs-lib/src/psbt/bip371.js";
 import { randomBytes } from 'crypto';
 import * as ecc from 'tiny-secp256k1';
 
@@ -40,14 +39,9 @@ bitcoin.initEccLib(ecc);
   // target key
   const internalKey = bip32.fromSeed(rng(64), network);
 
-  // tweaked keys
-  const tweakedSigner = internalKey.tweak(
-    bitcoin.crypto.taggedHash('TapTweak', toXOnly(internalKey.publicKey)),
-  );
-
   // P2TR key path address
-  const keyPath = bitcoin.payments.p2tr({
-      pubkey: toXOnly(tweakedSigner.publicKey),
+  const keyPath = bitcoin.payments.p2wpkh({
+      pubkey: internalKey.publicKey,
       network
   });
   const keyPathAddr = keyPath.address!;
@@ -95,7 +89,6 @@ bitcoin.initEccLib(ecc);
       value: inputSats,
       script: keyPath.output!,
     },
-    tapInternalKey: keyPath.pubkey!,
   });
 
   const recvAddr = await rpc.request('getnewaddress') as string;
@@ -104,7 +97,7 @@ bitcoin.initEccLib(ecc);
     value: inputSats - FEE,
   });
 
-  psbt.signInput(0, tweakedSigner);
+  psbt.signInput(0, internalKey);
   psbt.finalizeAllInputs();
 
   // broadcast redeem transaction
