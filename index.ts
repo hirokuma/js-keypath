@@ -35,7 +35,7 @@ bitcoin.initEccLib(ecc);
   let res;
 
   // for generatetoaddress
-  const genAddr = await rpc.request('getnewaddress') as string;
+  const genAddr = await rpc.request('getnewaddress', '', 'bech32m') as string;
 
   // target key
   const internalKey = bip32.fromSeed(rng(64), network);
