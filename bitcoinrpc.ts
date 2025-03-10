@@ -16,7 +16,7 @@ type RpcResponse = {
     result: unknown;
 };
 
-const RPCID = 'p2tr';
+const RPCID = 'bitcoinrpc';
 
 type Params = number | string | boolean;
 export async function request(method: string, ...params: Params[]) {
